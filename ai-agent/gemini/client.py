@@ -7,6 +7,7 @@ backend's own role checks decide what the agent can actually do.
 """
 
 import os
+import threading
 
 from dotenv import load_dotenv
 from google import genai
@@ -28,13 +29,28 @@ def _load_prompt(filename: str) -> str:
         return fh.read()
 
 
+# One client for the whole process.
+#
+# This must NOT be created per call. A Client created as a local variable is
+# garbage-collected once the function returns, which closes its HTTP transport.
+# The chat object outlives it, so the next send_message() fails with
+# "Cannot send a request, as the client has been closed."
+_CLIENT: genai.Client | None = None
+_CLIENT_LOCK = threading.Lock()
+
+
 def _client() -> genai.Client:
-    if not API_KEY or API_KEY == "your_api_key_here":
-        raise ValueError(
-            "Missing GEMINI_API_KEY. Add it to ai-agent/.env (local) or to the "
-            "service's environment variables (Render)."
-        )
-    return genai.Client(api_key=API_KEY)
+    global _CLIENT
+    if _CLIENT is None:
+        with _CLIENT_LOCK:
+            if _CLIENT is None:
+                if not API_KEY or API_KEY == "your_api_key_here":
+                    raise ValueError(
+                        "Missing GEMINI_API_KEY. Add it to ai-agent/.env (local) "
+                        "or to the service's environment variables (Render)."
+                    )
+                _CLIENT = genai.Client(api_key=API_KEY)
+    return _CLIENT
 
 
 def create_staff_session(token: str, name: str, role: str):

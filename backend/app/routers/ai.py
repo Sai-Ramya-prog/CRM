@@ -138,7 +138,7 @@ def chat_with_ai(
             print(f"/ai/chat failed after retry: {retry_error}")
             raise HTTPException(
                 status_code=503,
-                detail="The assistant is unavailable right now. Please try again.",
+                detail=f"The assistant is unavailable right now: {retry_error}"[:300],
             )
 
     _trim_history(chat)
