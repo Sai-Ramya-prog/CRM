@@ -34,7 +34,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
-      const response = await axios.post(`${API_URL}/ai/chat`, { message: msg });
+      // The agent acts as whoever is logged in: send their own token so the
+      // backend applies that person's role permissions to every tool call.
+      const token = localStorage.getItem('staff_token') || localStorage.getItem('customer_token');
+      if (!token) {
+        setMessages(prev => [...prev, { role: 'agent', content: 'Please log in first.' }]);
+        return;
+      }
+
+      const response = await axios.post(
+        `${API_URL}/ai/chat`,
+        { message: msg },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setMessages(prev => [...prev, { role: 'agent', content: response.data.response }]);
     } catch (error: any) {
       console.error('Error sending message:', error);

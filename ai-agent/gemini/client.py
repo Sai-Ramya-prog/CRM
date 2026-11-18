@@ -1,32 +1,61 @@
+"""
+Gemini chat sessions for the CRM assistant.
+
+A session is built per logged-in person, with the tool set and system prompt
+that match who they are. The caller's JWT is baked into the tools, so the
+backend's own role checks decide what the agent can actually do.
+"""
+
 import os
-from google import genai
+
 from dotenv import load_dotenv
-from .function_defs import crm_tools
+from google import genai
 
-# Load environment variables (API Key) from ai-agent/.env
-env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-load_dotenv(dotenv_path=env_path)
-api_key = os.getenv("GEMINI_API_KEY")
-raw_model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-model_name = raw_model.removeprefix("models/")
+from .crm_tools import build_customer_tools, build_staff_tools
 
-if not api_key or api_key == "your_api_key_here":
-    raise ValueError("Missing GEMINI_API_KEY. Please add it to your .env file in the ai-agent folder.")
+# Load ai-agent/.env (the backend's own .env is loaded separately by main.py)
+_env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+load_dotenv(dotenv_path=_env_path)
 
-# Initialize the new SDK client
-client = genai.Client(api_key=api_key)
+API_KEY = os.getenv("GEMINI_API_KEY")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").removeprefix("models/")
 
-# Read the system prompt
-prompt_path = os.path.join(os.path.dirname(__file__), '..', 'prompts', 'system_prompt.txt')
-with open(prompt_path, "r") as f:
-    system_instruction = f.read()
+_PROMPT_DIR = os.path.join(os.path.dirname(__file__), "..", "prompts")
 
-def get_chat_session():
-    """Returns an active chat session that remembers conversation history."""
-    return client.chats.create(
-        model=model_name,
+
+def _load_prompt(filename: str) -> str:
+    with open(os.path.join(_PROMPT_DIR, filename), "r", encoding="utf-8") as fh:
+        return fh.read()
+
+
+def _client() -> genai.Client:
+    if not API_KEY or API_KEY == "your_api_key_here":
+        raise ValueError(
+            "Missing GEMINI_API_KEY. Add it to ai-agent/.env (local) or to the "
+            "service's environment variables (Render)."
+        )
+    return genai.Client(api_key=API_KEY)
+
+
+def create_staff_session(token: str, name: str, role: str):
+    """Build a chat session for a staff member, scoped to their own token."""
+    system_instruction = _load_prompt("staff_prompt.txt").format(name=name, role=role)
+    return _client().chats.create(
+        model=MODEL_NAME,
         config={
-            "tools": crm_tools,
+            "tools": build_staff_tools(token),
             "system_instruction": system_instruction,
-        }
+        },
+    )
+
+
+def create_customer_session(token: str, name: str):
+    """Build a chat session for a customer, scoped to their own token."""
+    system_instruction = _load_prompt("customer_prompt.txt").format(name=name)
+    return _client().chats.create(
+        model=MODEL_NAME,
+        config={
+            "tools": build_customer_tools(token),
+            "system_instruction": system_instruction,
+        },
     )
