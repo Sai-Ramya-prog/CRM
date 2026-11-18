@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import axios from 'axios';
-import { API_URL } from '../config';
+import { api } from '../services/api';
 
 interface Message {
   role: 'user' | 'agent';
@@ -42,8 +41,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      const response = await axios.post(
-        `${API_URL}/ai/chat`,
+      const response = await api.post(
+        '/ai/chat',
         { message: msg },
         { headers: { Authorization: `Bearer ${token}` } }
       );
