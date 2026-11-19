@@ -14,12 +14,20 @@ from google import genai
 
 from .crm_tools import build_customer_tools, build_staff_tools
 
-# Load ai-agent/.env (the backend's own .env is loaded separately by main.py)
+# Load ai-agent/.env.
+#
+# override=True is load-bearing: main.py has already called load_dotenv() for
+# the backend's own .env, and load_dotenv does NOT replace a variable that is
+# already set. Without override, editing GEMINI_MODEL here silently does
+# nothing because the earlier value wins.
 _env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
-load_dotenv(dotenv_path=_env_path)
+load_dotenv(dotenv_path=_env_path, override=True)
 
 API_KEY = os.getenv("GEMINI_API_KEY")
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").removeprefix("models/")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip().removeprefix("models/")
+
+# Printed once at import so the model in use is never a guess.
+print(f"[ai-agent] using Gemini model: {MODEL_NAME!r} (from {os.path.abspath(_env_path)})")
 
 _PROMPT_DIR = os.path.join(os.path.dirname(__file__), "..", "prompts")
 
