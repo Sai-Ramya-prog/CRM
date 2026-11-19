@@ -3,6 +3,7 @@ import sys
 import threading
 import time
 
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.auth.dependencies import get_current_actor
@@ -18,6 +19,11 @@ _AI_AGENT_DIR = os.path.abspath(
 )
 if _AI_AGENT_DIR not in sys.path:
     sys.path.append(_AI_AGENT_DIR)
+
+# Load ai-agent/.env here too, so AI_PROVIDER is known before a provider module
+# is imported. Without this, the setting would only be read after the provider
+# had already been chosen.
+load_dotenv(dotenv_path=os.path.join(_AI_AGENT_DIR, ".env"), override=True)
 
 
 # ── Per-person chat sessions ────────────────────────────────────────────────
@@ -41,7 +47,15 @@ def _prune_locked() -> None:
 
 
 def _build_session(actor, token: str):
-    from gemini.client import create_customer_session, create_staff_session
+    # AI_PROVIDER picks the model vendor: "openai" or "gemini" (default).
+    # Both providers share the same tools and prompts; only the session and
+    # the tool-calling loop differ.
+    provider = os.getenv("AI_PROVIDER", "gemini").strip().lower()
+
+    if provider == "openai":
+        from openai_provider import create_customer_session, create_staff_session
+    else:
+        from gemini.client import create_customer_session, create_staff_session
 
     if isinstance(actor, Customer):
         return create_customer_session(token=token, name=actor.name)

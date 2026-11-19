@@ -14,6 +14,7 @@ import UsersPage from './pages/UsersPage';
 import AnnouncementsPage from './pages/AnnouncementsPage';
 import SupportPage from './pages/SupportPage';
 import CustomersPage from './pages/CustomersPage';
+import AssistantPage from './pages/AssistantPage';
 import RoleSelectorPage from './pages/RoleSelectorPage';
 import CustomerLayout from './layouts/CustomerLayout';
 import ShopPage from './pages/ShopPage';
@@ -61,6 +62,7 @@ function App() {
                   <Route path="support" element={<SupportPage />} />
                   <Route path="deals" element={<DealsPage />} />
                   <Route path="customers" element={<CustomersPage />} />
+                  <Route path="assistant" element={<AssistantPage />} />
                   <Route path="*" element={<Navigate to="/staff/dashboard" replace />} />
                 </Route>
               </Routes>

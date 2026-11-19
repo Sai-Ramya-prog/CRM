@@ -9,6 +9,7 @@ const baseLinks = [
   { name: 'Support',          path: '/staff/support',       icon: '🎫' },
   { name: 'Deals',            path: '/staff/deals',         icon: '◇' },
   { name: 'Customers',        path: '/staff/customers',     icon: '🛒' },
+  { name: 'AI Assistant',     path: '/staff/assistant',     icon: '🤖' },
 ];
 
 const Sidebar = () => {
